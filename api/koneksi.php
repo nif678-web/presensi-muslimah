@@ -26,16 +26,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 function getConnection() {
-    $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, (int)DB_PORT);
+    // Cek apakah berjalan di Railway (mendeteksi env variable Railway)
+    $host = getenv('MYSQLHOST') ?: 'localhost';
+    $user = getenv('MYSQLUSER') ?: 'root';
+    $pass = getenv('MYSQLPASSWORD') ?: '';
+    $db   = getenv('MYSQLDATABASE') ?: 'absensi_db';
+    $port = getenv('MYSQLPORT') ?: '3306';
+
+    $conn = new mysqli($host, $user, $pass, $db, $port);
+    
     if ($conn->connect_error) {
-        http_response_code(500);
-        echo json_encode([
-            'status'  => 'error',
-            'message' => 'Koneksi database gagal: ' . $conn->connect_error
-        ]);
-        exit();
+        die("Koneksi gagal: " . $conn->connect_error);
     }
-    $conn->set_charset('utf8mb4');
+    
     return $conn;
 }
 
