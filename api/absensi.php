@@ -4,6 +4,19 @@
 // ============================================
 require_once 'koneksi.php';
 
+/**
+ * Helper untuk mengirim response JSON
+ */
+function sendResponse($status, $message, $data = null) {
+    header('Content-Type: application/json');
+    $response = ['status' => $status, 'message' => $message];
+    if ($data !== null) {
+        $response['data'] = $data;
+    }
+    echo json_encode($response);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendResponse('error', 'Method tidak diizinkan');
 }
@@ -24,7 +37,6 @@ if (!$userId || !$latitude || !$longitude) {
 $connCfg = getConnection();
 $cfg     = [];
 
-// Cek apakah tabel settings ada
 $tblCheck = $connCfg->query("SHOW TABLES LIKE 'settings'");
 if ($tblCheck && $tblCheck->num_rows > 0) {
     $resCfg = $connCfg->query(
@@ -39,18 +51,14 @@ if ($tblCheck && $tblCheck->num_rows > 0) {
 }
 $connCfg->close();
 
-// Gunakan nilai dari DB, fallback ke default jika tidak ada
 $kampusLat  = isset($cfg['kampus_lat'])  ? (float)$cfg['kampus_lat']  : -6.2088;
 $kampusLng  = isset($cfg['kampus_lng'])  ? (float)$cfg['kampus_lng']  : 106.8456;
 $maxRadius  = isset($cfg['max_radius'])  ? (int)$cfg['max_radius']    : 100;
 $batasJam   = isset($cfg['batas_jam'])   ? (int)$cfg['batas_jam']     : 8;
 $batasMenit = isset($cfg['batas_menit']) ? (int)$cfg['batas_menit']   : 0;
 
-/**
- * Hitung jarak dua koordinat menggunakan Haversine Formula
- */
 function hitungJarak($lat1, $lng1, $lat2, $lng2) {
-    $R    = 6371000; // radius bumi dalam meter
+    $R    = 6371000;
     $dLat = deg2rad($lat2 - $lat1);
     $dLng = deg2rad($lng2 - $lng1);
     $a    = sin($dLat / 2) * sin($dLat / 2) +
@@ -66,19 +74,14 @@ if ($jarak > $maxRadius) {
     sendResponse('error', 'Lokasi di luar radius kampus. Jarak: ' . round($jarak) . 'm (maks ' . $maxRadius . 'm)');
 }
 
-// Tentukan status hadir / terlambat berdasarkan settings
-// Hadir  = waktu absen <= batas (jam:menit)
-// Terlambat = waktu absen > batas
 $jam    = (int)date('H');
 $menit  = (int)date('i');
 
-// Konversi ke total menit sejak tengah malam untuk perbandingan mudah
 $waktuSekarang = $jam * 60 + $menit;
 $waktuBatas    = $batasJam * 60 + $batasMenit;
 
 $status = ($waktuSekarang <= $waktuBatas) ? 'hadir' : 'terlambat';
 
-// Simpan foto Base64 jika ada
 $fotoPath = '';
 if (!empty($foto)) {
     $fotoData = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $foto));
@@ -93,7 +96,6 @@ if (!empty($foto)) {
 
 $conn = getConnection();
 
-// Cek apakah sudah absen hari ini
 $today = date('Y-m-d');
 $cek   = $conn->prepare(
     "SELECT id FROM absensi WHERE user_id = ? AND DATE(waktu) = ?"
