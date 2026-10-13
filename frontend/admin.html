@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – Smart Attendance</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body { background: #f1f5f9; }
+    .admin-wrap { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+    .admin-header {
+      background: linear-gradient(135deg,#1e40af,#2563eb);
+      color:#fff; padding:20px 24px; border-radius:14px;
+      margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;
+    }
+    .admin-header h1 { font-size:20px; }
+    .admin-header p  { font-size:13px; opacity:.75; margin-top:4px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { background:#f8fafc; color:#64748b; font-weight:600; padding:10px 12px; text-align:left; border-bottom:2px solid #e2e8f0; }
+    td { padding:10px 12px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    tr:hover td { background:#f8fafc; }
+    .tbl-foto { width:48px; height:48px; border-radius:6px; object-fit:cover; border:1.5px solid #e2e8f0; }
+    .tbl-foto-ph { width:48px; height:48px; border-radius:6px; background:#f1f5f9; display:inline-flex; align-items:center; justify-content:center; font-size:20px; border:1.5px dashed #e2e8f0; }
+    .filter-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+    .filter-row input, .filter-row select {
+      padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px;
+      font-size:13px; outline:none; background:#fff;
+    }
+    .filter-row input:focus, .filter-row select:focus { border-color:#2563eb; }
+    #total-badge { font-size:13px; color:#64748b; margin-left:auto; align-self:center; }
+  </style>
+</head>
+<body>
+<div class="admin-wrap">
+  <div class="admin-header">
+    <div>
+      <h1>📋 Admin – Smart Attendance</h1>
+      <p>Rekap seluruh data absensi mahasiswa</p>
+    </div>
+    <a href="index.html" class="btn btn-secondary btn-sm">← Kembali</a>
+  </div>
+
+  <div class="card">
+    <div class="filter-row">
+      <input type="text"  id="filter-nama"    placeholder="🔍 Cari nama / NIM…" oninput="filterTabel()" />
+      <input type="date"  id="filter-tanggal" onchange="filterTabel()" />
+      <select id="filter-status" onchange="filterTabel()">
+        <option value="">Semua Status</option>
+        <option value="hadir">Hadir</option>
+        <option value="terlambat">Terlambat</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="loadAdmin()">🔄 Muat Ulang</button>
+      <span id="total-badge"></span>
+    </div>
+
+    <div style="overflow-x:auto">
+      <table id="tabel-absensi">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Foto</th>
+            <th>Nama</th>
+            <th>NIM</th>
+            <th>Waktu</th>
+            <th>Status</th>
+            <th>Koordinat</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-absensi">
+          <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:30px">Klik "Muat Ulang" untuk menampilkan data</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = '../api';
+let allData = [];
+
+async function loadAdmin() {
+  const tbody = document.getElementById('tbody-absensi');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#94a3b8">Memuat…</td></tr>';
+
+  try {
+    // Ambil semua user dulu, lalu riwayat masing-masing
+    // Karena tidak ada endpoint "semua absensi", kita pakai endpoint riwayat
+    // dengan user_id=0 tidak valid – gunakan endpoint admin khusus jika ada,
+    // atau tampilkan pesan untuk input user_id manual
+    const userId = prompt('Masukkan user_id untuk melihat riwayat (kosongkan = semua jika API mendukung):');
+    if (userId === null) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:30px">Dibatalkan</td></tr>'; return; }
+
+    const url = userId.trim()
+      ? `${API_BASE}/riwayat.php?user_id=${userId.trim()}`
+      : `${API_BASE}/riwayat.php?user_id=0`;
+
+    const res = await fetch(url);
+    const json = await res.json();
+
+    if (json.status !== 'success' || !json.data.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:30px">Tidak ada data</td></tr>';
+      return;
+    }
+
+    allData = json.data;
+    filterTabel();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#dc2626;padding:30px">Error: ${e.message}</td></tr>`;
+  }
+}
+
+function filterTabel() {
+  const cari    = document.getElementById('filter-nama').value.toLowerCase();
+  const tgl     = document.getElementById('filter-tanggal').value;
+  const status  = document.getElementById('filter-status').value;
+
+  const filtered = allData.filter(r => {
+    const matchNama   = !cari   || r.nama.toLowerCase().includes(cari) || r.nim.toLowerCase().includes(cari);
+    const matchTgl    = !tgl    || r.waktu.startsWith(tgl);
+    const matchStatus = !status || r.status === status;
+    return matchNama && matchTgl && matchStatus;
+  });
+
+  document.getElementById('total-badge').textContent = `Total: ${filtered.length} record`;
+
+  const tbody = document.getElementById('tbody-absensi');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:30px">Tidak ada data sesuai filter</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((r, i) => {
+    const waktu = new Date(r.waktu).toLocaleString('id-ID');
+    const badgeCls = r.status === 'hadir' ? 'badge-hadir' : 'badge-terlambat';
+    const fotoEl = r.foto
+      ? `<img class="tbl-foto" src="../${r.foto}" alt="foto" onerror="this.outerHTML='<span class=tbl-foto-ph>🙍</span>'" />`
+      : `<span class="tbl-foto-ph">🙍</span>`;
+    return `
+      <tr>
+        <td>${i+1}</td>
+        <td>${fotoEl}</td>
+        <td><b>${r.nama}</b></td>
+        <td>${r.nim}</td>
+        <td>${waktu}</td>
+        <td><span class="badge ${badgeCls}">${r.status.toUpperCase()}</span></td>
+        <td style="font-size:11px;color:#64748b">${parseFloat(r.latitude).toFixed(5)},<br>${parseFloat(r.longitude).toFixed(5)}</td>
+      </tr>`;
+  }).join('');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Smart Attendance – Simulasi</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* =============================================
+       RESET & VARIABEL (Nuansa Pink & Hijau Segar)
+    ============================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary:  #10b981;
+      --primary-d:#059669;
+      --success:  #34d399;
+      --danger:   #f43f5e;
+      --danger-deep:#be123c;
+      --pink-strong:#fb7185;
+      --pink-soft:#ffe4e6;
+      --pink-cream:#fff1f2;
+      --green-soft:#d1fae5;
+      --green-deep:#047857;
+      --bg:       #fdf4f7;
+      --card:     rgba(255, 255, 255, 0.95);
+      --text:     #1f2937;
+      --muted:    #4b5563;
+      --border:   rgba(16, 185, 129, 0.22);
+      --radius:   22px;
+      --shadow:   0 12px 30px rgba(16, 185, 129, 0.08);
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(251, 113, 133, 0.22), transparent 40%),
+        radial-gradient(circle at 85% 90%, rgba(52, 211, 153, 0.25), transparent 40%),
+        linear-gradient(135deg, #fdf4f7 0%, #ecfdf5 100%);
+      color: var(--text);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Efek Kelopak Sakura Jatuh di Background Login */
+    .sakura-petals {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .sakura-petals span {
+      position: absolute;
+      display: block;
+      background: linear-gradient(135deg, #f43f5e, #fb7185);
+      border-radius: 150% 0 150% 0;
+      animation: fall linear infinite;
+      opacity: 0.5;
+    }
+    @keyframes fall {
+      0% { transform: translateY(-10vh) translateX(0) rotate(0deg); opacity: 0; }
+      20% { opacity: 0.7; }
+      100% { transform: translateY(110vh) translateX(40px) rotate(360deg); opacity: 0; }
+    }
+
+    /* =============================================
+       HALAMAN (show/hide)
+    ============================================= */
+    .page { display: none !important; }
+    .page.active { display: block !important; }
+
+    /* =============================================
+       LOGIN
+    ============================================= */
+    #page-login.active {
+      position: relative;
+      display: flex !important;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px 16px;
+      z-index: 1;
+    }
+
+    .app-header {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      color: var(--text);
+      margin-bottom: 28px;
+    }
+    .app-logo {
+      display: block;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 12px;
+      object-fit: contain;
+      border-radius: 50%;
+      background: #fff;
+      padding: 4px;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+      border: 2px solid var(--primary);
+    }
+    .app-header h1 { 
+      font-size: 24px; 
+      font-weight: 800; 
+      background: linear-gradient(135deg, var(--green-deep), var(--danger-deep));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .app-header p  { font-size: 14px; color: var(--muted); font-weight: 600; margin-top: 4px; }
+
+    /* =============================================
+       CARD UMUM
+    ============================================= */
+    .card {
+      position: relative;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      backdrop-filter: blur(10px);
+    }
+    #page-login .card {
+      width: 100%;
+      max-width: 400px;
+      position: relative;
+      z-index: 1;
+    }
+    #page-login .card h2 { font-size: 1.2rem; font-weight: 700; color: var(--green-deep); margin-bottom: 18px; }
+    .card h3 { font-size: 1rem; font-weight: 700; color: var(--green-deep); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+    /* =============================================
+       FORM
+    ============================================= */
+    .form-group { margin-bottom: 18px; }
+    .form-group label {
+      display: block; font-size: 12px; font-weight: 700;
+      color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px;
+    }
+    .form-group input {
+      width: 100%; padding: 12px 16px;
+      border: 1.5px solid var(--border); border-radius: 14px;
+      font-size: 15px; color: var(--text); outline: none;
+      background: rgba(255, 255, 255, 0.95);
+      transition: all .2s ease;
+    }
+    .form-group input:focus { 
+      border-color: var(--primary); 
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+    }
+    .input-eye { position: relative; }
+    .input-eye input { padding-right: 44px; }
+    .btn-eye {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; font-size: 18px; color: var(--muted);
+    }
+
+    /* =============================================
+       TOMBOL
+    ============================================= */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 20px; border-radius: 999px; border: none;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: all .2s ease;
+      text-decoration: none;
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.15);
+    }
+    .btn:active  { transform: scale(.98); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-d));
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px rgba(16, 185, 129, 0.25);
+    }
+    .btn-secondary { background: var(--green-soft); color: var(--green-deep); border: 1.5px solid var(--border); box-shadow: none; }
+    .btn-secondary:hover:not(:disabled) { background: #a7f3d0; }
+    .btn-success { background: linear-gradient(135deg, var(--success), var(--primary-d)); color: #fff; box-shadow: 0 6px 18px rgba(52, 211, 153, 0.25); }
+    .btn-danger { background: linear-gradient(135deg, var(--danger), var(--danger-deep)); color: #fff; box-shadow: 0 6px 18px rgba(244, 63, 94, 0.25); }
+    .btn-full { width: 100%; }
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1.5px solid var(--border);
+      color: var(--green-deep);
+      margin-top: 14px;
+      box-shadow: none;
+    }
+    .btn-ghost:hover { background: #fff; color: var(--primary-d); }
+    .btn-sm { padding: 8px 16px; font-size: 13px; }
+    .btn-absen {
+      font-size: 16px; padding: 18px; border-radius: var(--radius); margin-bottom: 24px;
+      background: linear-gradient(135deg, var(--primary), var(--pink-strong));
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.25);
+    }
+
+    /* =============================================
+       TAMPILAN BARU HALAMAN ABSENSI (HOME)
+    ============================================= */
+    #page-home {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: var(--bg);
+      padding-bottom: 30px;
+    }
+
+    /* Topbar Desain Banner Profil */
+    .topbar {
+      background: linear-gradient(135deg, var(--green-deep), var(--primary));
+      color: #fff;
+      padding: 22px 20px 30px 20px;
+      border-bottom-left-radius: 28px;
+      border-bottom-right-radius: 28px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 8px 25px rgba(4, 120, 87, 0.2);
+    }
+    .topbar-user-box { display: flex; align-items: center; gap: 12px; }
+    .topbar-avatar {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .topbar-name { font-size: 17px; font-weight: 800; color: #fff; }
+    .topbar-nim  { font-size: 12px; color: rgba(255, 255, 255, 0.85); font-weight: 600; margin-top: 2px; }
+    
+    .btn-logout {
+      background: rgba(255, 255, 255, 0.2); color: #fff;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      border-radius: 12px; padding: 8px 14px;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: background .2s;
+    }
+    .btn-logout:hover { background: rgba(255, 255, 255, 0.35); }
+
+    /* Tab Nav Pill Style */
+    .tab-nav {
+      display: flex; 
+      background: #fff;
+      margin: -18px 20px 20px 20px;
+      border-radius: 16px;
+      padding: 6px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+      border: 1.5px solid var(--border);
+      position: relative; z-index: 50;
+    }
+    .tab-btn {
+      flex: 1; padding: 10px; background: none; border: none;
+      font-size: 13px; font-weight: 700; color: var(--muted);
+      cursor: pointer; border-radius: 12px;
+      transition: all .2s ease;
+    }
+    .tab-btn:hover { color: var(--primary); }
+    .tab-btn.active { 
+      background: linear-gradient(135deg, var(--green-soft), var(--pink-soft));
+      color: var(--green-deep); 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    /* Container Konten Tab */
+    .tab-content { display: none; padding: 0 20px; }
+    .tab-content.active { display: block; animation: fadeIn .3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Status Banner Khusus */
+    .status-banner {
+      background: linear-gradient(135deg, #ffffff, #f0fdf4);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .status-time-box { text-align: right; }
+    .status-date { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .status-clock { font-size: 15px; font-weight: 800; color: var(--green-deep); }
+    
+    .badge {
+      display: inline-flex; align-items: center; padding: 6px 14px;
+      border-radius: 20px; font-size: 12px; font-weight: 700;
+    }
+    .badge-idle      { background: var(--pink-soft); color: var(--danger-deep); border: 1px solid var(--border); }
+    .badge-hadir     { background: #ecfdf5; color: #047857; border: 1.5px solid rgba(16, 185, 129, 0.3); }
+    .badge-terlambat { background: #ffe4e6; color: #be123c; border: 1.5px solid rgba(244, 63, 94, 0.3); }
+
+    /* Peta Card Style */
+    #map {
+      height: 200px; border-radius: 14px;
+      border: 1.5px solid var(--border); margin-bottom: 12px;
+    }
+    .leaflet-pane,
+    .leaflet-top,
+    .leaflet-bottom { z-index: 1 !important; }
+    .lokasi-info { margin-bottom: 12px; background: rgba(209, 250, 229, 0.3); padding: 10px 14px; border-radius: 12px; }
+    .lokasi-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 12px;
+    }
+    .lokasi-row:last-child { border-bottom: none; }
+    .lokasi-row span:first-child { color: var(--muted); font-weight: 600; }
+    .lokasi-row span:last-child  { font-weight: 700; text-align: right; max-width: 60%; color: var(--green-deep); }
+
+    /* Foto Style */
+    .foto-preview-wrap {
+      position: relative; margin-bottom: 14px;
+      border-radius: 14px; overflow: hidden;
+      border: 2px solid var(--primary);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.1);
+    }
+    .foto-preview-wrap img {
+      width: 100%; display: block; max-height: 240px; object-fit: cover;
+    }
+    .btn-hapus-foto {
+      position: absolute; top: 10px; right: 10px;
+      background: rgba(0,0,0,0.6); color: #fff;
+      border: none; border-radius: 8px; padding: 6px 12px;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+    }
+    .foto-placeholder {
+      height: 110px; border: 2px dashed var(--border); border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 13px; font-weight: 600; margin-bottom: 14px;
+      background: rgba(209, 250, 229, 0.2);
+    }
+
+    /* Kamera live */
+    .kamera-wrap { margin-bottom: 14px; }
+    .kamera-wrap video {
+      width: 100%; border-radius: 14px;
+      border: 2px solid var(--primary); background: #000; display: block;
+    }
+    .kamera-controls { display: flex; gap: 10px; margin-top: 12px; }
+    .kamera-controls .btn { flex: 1; }
+
+    .foto-actions {
+      display: flex; gap: 10px; margin-top: 4px;
+    }
+    .foto-actions .btn,
+    .foto-actions .btn-upload-label {
+      flex: 1;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 12px 16px; border-radius: 999px; border: none;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      background: var(--green-soft); color: var(--green-deep);
+      border: 1.5px solid var(--border);
+      transition: all .2s ease;
+      user-select: none;
+    }
+    .foto-actions .btn-upload-label:hover,
+    .foto-actions .btn:hover { background: #a7f3d0; }
+
+    .input-file-hidden { display: none; }
+
+    /* Alert */
+    .alert {
+      display: none;
+      padding: 14px 18px; border-radius: 14px;
+      font-size: 13px; font-weight: 600; margin-bottom: 14px;
+      border-left: 5px solid transparent;
+    }
+    .alert.show { display: block; animation: fadeIn .3s ease; }
+    .alert-success { background: #ecfdf5; color: var(--green-deep); border-color: var(--primary); }
+    .alert-error   { background: #ffe4e6; color: var(--danger-deep); border-color: var(--danger); }
+    .alert-info    { background: #e0f2fe; color: #0369a1; border-color: #0284c7; }
+
+    /* Riwayat Item */
+    .riwayat-item {
+      background: var(--card); border-radius: var(--radius);
+      padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow);
+      display: flex; gap: 14px; align-items: flex-start;
+      border: 1.5px solid var(--border);
+    }
+    .riwayat-foto {
+      width: 55px; height: 55px; border-radius: 12px;
+      object-fit: cover; flex-shrink: 0; border: 2px solid var(--primary);
+    }
+    .riwayat-foto-ph {
+      width: 55px; height: 55px; border-radius: 12px; flex-shrink: 0;
+      background: var(--green-soft); border: 2px dashed var(--border);
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .riwayat-info { flex: 1; min-width: 0; }
+    .ri-tanggal { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+    .ri-status  { margin-bottom: 6px; }
+    .ri-lokasi  { font-size: 11px; color: var(--muted); }
+
+    .empty-state {
+      text-align: center; padding: 40px 20px;
+      color: var(--muted); font-size: 13px; font-weight: 600;
+    }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (min-width: 520px) {
+      body { background: #e6f4ed; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Efek Kelopak Bunga Sakura Dekoratif untuk Login -->
+<div class="sakura-petals">
+  <span style="left: 8%; width: 14px; height: 14px; animation-duration: 11s; animation-delay: 0s;"></span>
+  <span style="left: 25%; width: 10px; height: 10px; animation-duration: 13s; animation-delay: 2s;"></span>
+  <span style="left: 45%; width: 16px; height: 16px; animation-duration: 9s; animation-delay: 4s;"></span>
+  <span style="left: 70%; width: 12px; height: 12px; animation-duration: 12s; animation-delay: 1s;"></span>
+  <span style="left: 88%; width: 15px; height: 15px; animation-duration: 10s; animation-delay: 3s;"></span>
+</div>
+
+<!-- ============================= LOGIN ============================= -->
+<div id="page-login" class="page active">
+  <div class="app-header">
+    <img class="app-logo" src="pic.png" alt="Smart Attendance Logo" width="80" height="80" onerror="this.onerror=null; this.src='../pic.png';" />
+    <h1>Presensi Muslimah</h1>
+    <p>Sistem Presensi Digital Kampus</p>
+  </div>
+
+  <div class="card">
+    <h2>🌿🌸 Masuk Akun</h2>
+    <div id="login-alert" class="alert"></div>
+
+    <div class="form-group">
+      <label for="nim">NIM</label>
+      <input type="text" id="nim" placeholder="Masukkan NIM Anda" autocomplete="off" />
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <div class="input-eye">
+        <input type="password" id="password" placeholder="Masukkan password" />
+        <button type="button" class="btn-eye" onclick="togglePassword()">👁</button>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()">
+      <span id="login-btn-text">✨ Masuk</span>
+    </button>
+  </div>
+  <a class="btn btn-ghost" href="../index.html">🏠 Home</a>
+</div>
+
+<!-- ============================= HOME (TAMPILAN BARU) ============================= -->
+<div id="page-home" class="page">
+
+  <!-- Topbar Banner Profil -->
+  <div class="topbar">
+    <div class="topbar-user-box">
+      <div class="topbar-avatar">🧕</div>
+      <div>
+        <div class="topbar-name" id="user-name">–</div>
+        <div class="topbar-nim"  id="user-nim">–</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">Keluar</button>
+  </div>
+
+  <!-- Tab Nav Pill Style -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('absensi')">📋 Form Absensi</button>
+    <button class="tab-btn"        onclick="switchTab('riwayat')">📜 Riwayat Presensi</button>
+  </div>
+
+  <!-- ============ TAB ABSENSI ============ -->
+  <div id="tab-absensi" class="tab-content active">
+
+    <!-- Status Banner -->
+    <div class="status-banner">
+      <div id="absensi-status-badge" class="badge badge-idle">Belum Absen</div>
+      <div class="status-time-box">
+        <div class="status-date" id="tanggal-hari">–</div>
+        <div class="status-clock" id="jam-sekarang">–</div>
+      </div>
+    </div>
+
+    <!-- Lokasi Card -->
+    <div class="card">
+      <h3>🌿 Validasi Lokasi Kampus</h3>
+      <div id="map"></div>
+      <div class="lokasi-info">
+        <div class="lokasi-row">
+          <span>Koordinat</span>
+          <span id="koordinat-text">Mendeteksi…</span>
+        </div>
+        <div class="lokasi-row">
+          <span>Jarak ke Kampus</span>
+          <span id="jarak-text">–</span>
+        </div>
+        <div class="lokasi-row">
+          <span>Status Radius</span>
+          <span id="status-lokasi-text">–</span>
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-full" onclick="refreshLokasi()">🔄 Perbarui Lokasi GPS</button>
+    </div>
+
+    <!-- Foto Card -->
+    <div class="card">
+      <h3>📸 Verifikasi Foto Selfie</h3>
+
+      <!-- Preview foto -->
+      <div id="foto-preview-wrap" class="foto-preview-wrap" style="display:none">
+        <img id="foto-preview" src="" alt="Preview foto" />
+        <button class="btn-hapus-foto" onclick="hapusFoto()">✕ Hapus</button>
+      </div>
+
+      <!-- Placeholder -->
+      <div id="foto-placeholder" class="foto-placeholder">
+        <span>Belum ada foto yang dipilih</span>
+      </div>
+
+      <!-- Kamera live -->
+      <div id="kamera-wrap" class="kamera-wrap" style="display:none">
+        <video id="video-stream" autoplay playsinline muted></video>
+        <div class="kamera-controls">
+          <button class="btn btn-danger"  onclick="tutupKamera()">✕ Batal</button>
+          <button class="btn btn-success" onclick="ambilFoto()">📸 Ambil Foto</button>
+        </div>
+      </div>
+
+      <canvas id="canvas-foto" style="display:none"></canvas>
+
+      <!-- Tombol aksi foto -->
+      <div id="foto-actions" class="foto-actions">
+        <button class="btn btn-secondary" onclick="bukaKamera()">📷 Buka Kamera</button>
+        <label  class="btn-upload-label" onclick="document.getElementById('input-foto').click()">
+          🖼 Upload Foto
+        </label>
+        <input  class="input-file-hidden" type="file" id="input-foto"
+                accept="image/*" onchange="uploadFotoFile(event)" />
+      </div>
+      <p id="kamera-hint" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;font-weight:600;">
+        💡 Pastikan izin akses kamera/lokasi browser aktif
+      </p>
+    </div>
+
+    <!-- Alert & Tombol Absen -->
+    <div id="absensi-alert" class="alert"></div>
+    <button class="btn btn-primary btn-full btn-absen" id="btn-absen" onclick="doAbsensi()">
+      ✨ Kirim Presensi Sekarang
+    </button>
+
+  </div><!-- /tab-absensi -->
+
+  <!-- ============ TAB RIWAYAT ============ -->
+  <div id="tab-riwayat" class="tab-content">
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between">
+      <h3 style="margin:0">📜 Riwayat Presensi</h3>
+      <button class="btn btn-secondary btn-sm" onclick="loadRiwayat()">🔄 Muat Ulang</button>
+    </div>
+    <div id="riwayat-list">
+      <div class="empty-state">Tekan "Muat Ulang" untuk menampilkan riwayat data</div>
+    </div>
+  </div>
+
+</div><!-- /page-home -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
