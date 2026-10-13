@@ -2,7 +2,7 @@
 // Smart Attendance – Simulasi Frontend
 // ============================================
 
-const API_BASE = '../api';
+const API_BASE = '/api';
 
 // ---- State ----
 let currentUser  = null;
