@@ -394,10 +394,10 @@ $conn->close();
             <tr>
               <td><?= $i + 1 ?></td>
               <td>
-                <?php if (!empty($row['foto'])): ?>
+                <?php if (!empty($row['foto']) && file_exists(__DIR__ . '/../' . $row['foto'])): ?>
                   <img src="../<?= htmlspecialchars($row['foto']) ?>" class="foto-thumb" alt="foto">
                 <?php else: ?>
-                  <div class="no-foto">📷</div>
+                  <div class="no-foto" title="Foto tersimpan di database / file belum ada">📸</div>
                 <?php endif; ?>
               </td>
               <td><strong><?= htmlspecialchars($row['nama']) ?></strong></td>
