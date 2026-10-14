@@ -4,18 +4,6 @@
 // ============================================
 require_once 'koneksi.php';
 
-/**
- * Helper untuk mengirim response JSON
- */
-function sendResponse($status, $message, $data = null) {
-    header('Content-Type: application/json');
-    $response = ['status' => $status, 'message' => $message];
-    if ($data !== null) {
-        $response['data'] = $data;
-    }
-    echo json_encode($response);
-    exit;
-}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendResponse('error', 'Method tidak diizinkan');
