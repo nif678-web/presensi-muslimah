@@ -73,10 +73,19 @@ $status = ($waktuSekarang <= $waktuBatas) ? 'hadir' : 'terlambat';
 
 $fotoPath = '';
 if (!empty($foto)) {
-    // Simpan string Base64 langsung ke database
-    $fotoPath = $foto; 
+    $fotoData = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $foto));
+    if ($fotoData !== false) {
+        $fotoName = 'foto_' . $userId . '_' . time() . '.jpg';
+        $fotoDir  = __DIR__ . '/../uploads/';
+        
+        if (!is_dir($fotoDir)) {
+            @mkdir($fotoDir, 0777, true);
+        }
+        
+        @file_put_contents($fotoDir . $fotoName, $fotoData);
+        $fotoPath = 'uploads/' . $fotoName;
+    }
 }
-
 
 $conn = getConnection();
 
