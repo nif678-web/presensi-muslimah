@@ -396,10 +396,10 @@ $conn->close();
               <td>
                 <?php if (!empty($row['foto'])): ?>
                   <?php 
-                    // Cek apakah data foto berupa base64 atau path file biasa
+                    // Jika berisi data base64 (diawali data:image), tampilkan langsung
                     $imgSrc = (strpos($row['foto'], 'data:image') === 0) ? $row['foto'] : '../' . $row['foto'];
                   ?>
-                  <img src="<?= $imgSrc ?>" class="foto-thumb" alt="foto" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'no-foto\'>📸</div>';">
+                  <img src="<?= htmlspecialchars($imgSrc) ?>" class="foto-thumb" alt="foto" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'no-foto\'>📸</div>';">
                 <?php else: ?>
                   <div class="no-foto">📸</div>
                 <?php endif; ?>
