@@ -73,15 +73,28 @@ $status = ($waktuSekarang <= $waktuBatas) ? 'hadir' : 'terlambat';
 
 $fotoPath = '';
 if (!empty($foto)) {
+    // Bersihkan format base64
     $fotoData = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $foto));
     if ($fotoData !== false) {
         $fotoName = 'foto_' . $userId . '_' . time() . '.jpg';
-        $fotoDir  = __DIR__ . '/../uploads/';
-        if (!is_dir($fotoDir)) mkdir($fotoDir, 0755, true);
+        
+        // Perbaiki path mutlak menggunakan $_SERVER['DOCUMENT_ROOT'] atau direktori akar aplikasi
+        $rootPath = dirname(__DIR__); // Mengarah ke folder utama /app
+        $fotoDir = $rootPath . '/uploads/';
+        
+        // Buat folder uploads jika belum ada
+        if (!is_dir($fotoDir)) {
+            @mkdir($fotoDir, 0777, true);
+        }
+        
+        // Simpan file foto fisik ke server
         @file_put_contents($fotoDir . $fotoName, $fotoData);
+        
+        // Simpan path relatif untuk diakses dari halaman web (admin & frontend)
         $fotoPath = 'uploads/' . $fotoName;
     }
 }
+
 
 $conn = getConnection();
 
