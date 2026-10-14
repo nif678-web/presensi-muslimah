@@ -77,7 +77,7 @@ if (!empty($foto)) {
         $fotoName = 'foto_' . $userId . '_' . time() . '.jpg';
         $fotoDir  = __DIR__ . '/../uploads/';
         if (!is_dir($fotoDir)) mkdir($fotoDir, 0755, true);
-        file_put_contents($fotoDir . $fotoName, $fotoData);
+        @file_put_contents($fotoDir . $fotoName, $fotoData);
         $fotoPath = 'uploads/' . $fotoName;
     }
 }
